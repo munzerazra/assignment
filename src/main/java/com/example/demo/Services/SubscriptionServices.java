@@ -1,5 +1,6 @@
 package com.example.demo.Services;
 
+import com.example.demo.Constants.Constants;
 import com.example.demo.Dtos.AirportDto;
 import com.example.demo.Dtos.SubscriptionDto;
 import com.example.demo.Entities.Airport;
@@ -10,6 +11,7 @@ import com.sun.istack.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -39,6 +41,7 @@ public class SubscriptionServices {
             Airport airport = new Airport();
             airport.setAirportCode(airportDto.airportCode);
             airport.setSubscription(savedSubscription);
+            airport.setStatus((long) Constants.Status.ACTIVE.getCode());
             airport = airportRepo.save(airport);
             savedSubscription.getAirports().add(airport);
             savedSubscription = subscriptionRepo.save(savedSubscription);
@@ -56,19 +59,36 @@ public class SubscriptionServices {
         return subscriptionDtoSaved;
     }
 
-    public SubscriptionDto viewSubscription(String subscriptionName) {
+    public SubscriptionDto viewSubscription(String subscriptionName, SubscriptionDto subscriptionDto1) {
         if (subscriptionName == null || subscriptionName.isEmpty()) {
             throw new NoSuchElementException();
         }
-        Subscription subscription = subscriptionRepo.findByName(subscriptionName).orElseThrow(NoSuchElementException::new);
-        if (subscription == null) {
-            throw new NoSuchElementException();
+        Subscription subscription = null;
+        //Set<Long> status=new HashSet<>();
+        //SubscriptionDto subscriptionDto1 = Arrays.stream(subscriptionDto).findAny().get();
+        if (subscriptionDto1 == null)
+            subscription = subscriptionRepo.findByName(subscriptionName)
+                    .orElseThrow(NoSuchElementException::new);
+        else {
+            String filter = subscriptionDto1.getFilter();
+            Long status = subscriptionDto1.getStatus();
+            if ((status == null || (!status.equals((long) Constants.Status.ACTIVE.getCode())
+                    && !status.equals((long) Constants.Status.INACTIVE.getCode())))
+                    && (filter == null || filter.equals(""))) {
+                subscription = subscriptionRepo.findByName(subscriptionName)
+                        .orElseThrow(NoSuchElementException::new);
+            } else if ((filter == null || filter.equals("")))
+                subscription = subscriptionRepo.findByAirportCodeAndStatus(subscriptionName, status)
+                        .orElseThrow(NoSuchElementException::new);
+            else subscription = subscriptionRepo.findByAirportCodeAndStatusFiltered(subscriptionName, filter, status)
+                        .orElseThrow(NoSuchElementException::new);
         }
-
         SubscriptionDto subscriptionDtoView = new SubscriptionDto();
+        assert subscription != null;
         for (Airport airport : subscription.getAirports()) {
             AirportDto airportDto = new AirportDto();
             airportDto.setAirportCode(airport.getAirportCode());
+            airportDto.setStatus(String.valueOf(airport.getStatus()));
             subscriptionDtoView.getAirportDtos().add(airportDto);
         }
 
@@ -113,20 +133,29 @@ public class SubscriptionServices {
             airportsCodes.add(airportDto.getAirportCode());
         }
         airports = airportRepo.findAllByName(airportsCodes);
-        if (airports.isEmpty()) throw  new RuntimeException(NO_AIRPORT_FOUND.name());
+        if (airports.isEmpty()) throw new RuntimeException(NO_AIRPORT_FOUND.name());
         subscription.getAirports().removeAll(airports);
-        subscription=subscriptionRepo.save(subscription);
+        subscription = subscriptionRepo.save(subscription);
         airportRepo.deleteAll(airports);
 
         return subscriptionDto;
     }
 
     public Long deleteSubscription(@org.jetbrains.annotations.NotNull SubscriptionDto subscriptionDto) {
-        Subscription subscription = subscriptionRepo.findByName(subscriptionDto.getSubscriptionName()).orElseThrow(NoSuchElementException::new);
-        if (subscription == null)
-            throw new NoSuchElementException();
+        Subscription subscription = subscriptionRepo.findByName(subscriptionDto.getSubscriptionName())
+                .orElseThrow(NoSuchElementException::new);
         subscriptionRepo.deleteById(subscription.getId());
         return subscription.getId();
+    }
+
+    public void updateAirportStatusBySubscription(String subscriptionName, String airportCode) {
+        Subscription subscription = subscriptionRepo.findByName(subscriptionName)
+                .orElseThrow(NoSuchElementException::new);
+
+        Airport airport = subscription.getAirports()
+                .stream().filter(airport1 -> airport1.getAirportCode().matches(airportCode))
+                .findAny().orElseThrow();
+        updateStatus(airport);
     }
 
     @NotNull
@@ -135,5 +164,18 @@ public class SubscriptionServices {
         return (countKey == 0);
     }
 
-
+    /**
+     * helper Method to update airport status
+     */
+    private void updateStatus(Airport airport) {
+        if (airport == null)
+            throw new RuntimeException(NO_AIRPORT_FOUND.name());
+        else if (airport.getStatus() == Constants.Status.ACTIVE.getCode()) {
+            airport.setStatus((long) Constants.Status.INACTIVE.getCode());
+            airportRepo.save(airport);
+        } else {
+            airport.setStatus((long) Constants.Status.INACTIVE.getCode());
+            airportRepo.save(airport);
+        }
+    }
 }

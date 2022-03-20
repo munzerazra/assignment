@@ -3,6 +3,7 @@ package com.example.demo.Controllers;
 import com.example.demo.Dtos.MetarDataDto;
 import com.example.demo.Services.MetarServices;
 import com.example.demo.Services.Scheduler;
+import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +43,7 @@ public class MetarContoller {
      * @param name - airport code value
      * @return MetarDataDto
      */
+    @SneakyThrows
     @GetMapping(value = "/airport/data/{name}")
     @ResponseStatus(HttpStatus.OK)
     public MetarDataDto getMetarDataByAirportCode(@PathVariable("name") String name) {

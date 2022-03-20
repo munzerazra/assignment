@@ -20,4 +20,14 @@ public class MetarData {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
+
+    @Column(name = "timestamp")
+    String timestamp;
+    @Column(name = "windStrength")
+    Long windStrength;
+    @Column(name = "temperature")
+    Long temperature;
+    @Column(name = "overallVisibility")
+    String overallVisibility;
+
 }

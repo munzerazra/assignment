@@ -21,6 +21,9 @@ public class Airport {
 
     @Column(name = "airportCode", nullable = false, unique = true)
     private String airportCode;
+    @Column(name = "status")
+    private Long status;
+
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subscription", nullable = false)

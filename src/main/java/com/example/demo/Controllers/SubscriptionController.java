@@ -42,8 +42,20 @@ public class SubscriptionController {
      */
     @GetMapping(value = "/{name}")
     @ResponseStatus(HttpStatus.OK)
-    public SubscriptionDto view(@PathVariable("name") String name) {
-        return subscriptionServices.viewSubscription(name);
+    public SubscriptionDto view(@PathVariable("name") String name, @RequestBody SubscriptionDto subscriptionDto) {
+        return subscriptionServices.viewSubscription(name, subscriptionDto);
+    }
+
+    /**
+     * Method to view subscription details
+     *
+     * @param name - the subscription name
+     * @return {SubscriptionDto}
+     */
+    @GetMapping(value = "/filtered/{name}")
+    @ResponseStatus(HttpStatus.OK)
+    public SubscriptionDto viewWithFilter(@PathVariable("name") String name, @RequestBody SubscriptionDto subscriptionDto) {
+        return subscriptionServices.viewSubscription(name, subscriptionDto);
     }
 
     /**
@@ -79,6 +91,19 @@ public class SubscriptionController {
     @ResponseStatus(HttpStatus.OK)
     public SubscriptionDto deleteAirportsSubscription(@RequestBody SubscriptionDto dto) {
         return subscriptionServices.deleteAirportsSubscription(dto);
+    }
+
+    /**
+     * Method to update all subscription airport status
+     *
+     * @param subscriptionName -
+     * @param airportCode      -
+     * @return {Long}
+     */
+    @PutMapping(value = "/updateState/{subscription}/{airportCode}")
+    @ResponseStatus(HttpStatus.OK)
+    public void updateAirportStatusBySubscription(@PathVariable("subscription") String subscriptionName, @PathVariable("airportCode") String airportCode) {
+        subscriptionServices.updateAirportStatusBySubscription(subscriptionName, airportCode);
     }
 
 }

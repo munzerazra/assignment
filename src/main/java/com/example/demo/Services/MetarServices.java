@@ -6,6 +6,9 @@ import com.example.demo.Entities.MetarData;
 import com.example.demo.Entities.Subscription;
 import com.example.demo.repos.MetarDataRepo;
 import com.example.demo.repos.SubscriptionRepo;
+import io.github.mivek.model.Metar;
+import io.github.mivek.service.MetarService;
+import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +42,15 @@ public class MetarServices {
         boolean found = metarDataRepo.findByAirportCode(airportCode).isPresent();
         if (found) {
             metarData = metarDataRepo.findByAirportCode(airportCode).get();
-            metarData.setData(metar);
+            //calling the parsing method
+            MetarDataDto metarDataDto = parsingMetarDataByAirportCode(metar);
+
+            metarData.setData(metarDataDto.getData())
+                    .setTemperature(metarDataDto.getTemperature())
+                    .setTimestamp(metarDataDto.getTimestamp())
+                    .setOverallVisibility(metarDataDto.getOverallVisibility())
+                    .setWindStrength(metarDataDto.getWindStrength());
+            parsingMetarDataByAirportCode(metar);
             metarDataRepo.save(metarData);
         } else {
             metarData.setAirportCode(airportCode).setData(metar);
@@ -87,15 +98,41 @@ public class MetarServices {
         }
     }
 
-    public MetarDataDto retrieveMetarDataByAirportCode(String airportCode) {
+    public MetarDataDto retrieveMetarDataByAirportCode(String airportCode) throws RuntimeException {
         MetarDataDto metarDataDto = new MetarDataDto();
         if (airportCode == null || airportCode.isEmpty()) {
             throw new RuntimeException(MISSING_AIRPORT_CODE.name());
         }
 
         MetarData metarData = metarDataRepo.findByAirportCode(airportCode).orElseThrow();
-        return metarDataDto.setData(metarData.getData());
+        return parsingMetarDataByAirportCode(metarData.getData());
     }
+
+    @SneakyThrows
+    public MetarDataDto parsingMetarDataByAirportCode(String metarData) {
+        MetarDataDto metarDataDto = new MetarDataDto();
+        MetarService metarService = MetarService.getInstance();
+        Metar metar = null;
+        try {
+            metar = metarService.decode(metarData);
+        } catch (RuntimeException e) {
+            logger.error("Error while decoding the metar Data ");
+            e.printStackTrace();
+        }
+        assert metar != null;
+        if (metar.getVisibility() != null && metar.getVisibility().getMainVisibility() != null)
+            metarDataDto.setOverallVisibility(metar.getVisibility().getMainVisibility());
+        if (metar.getTemperature() != null)
+            metarDataDto.setTemperature((long) metar.getTemperature());
+        if (metar.getTime() != null)
+            metarDataDto.setTimestamp(String.valueOf(metar.getTime()));
+        metar.getWind().getSpeed();
+        metarDataDto.setWindStrength((long) metar.getWind().getSpeed());
+
+        metarDataDto.setData(metarData);
+        return metarDataDto;
+    }
+
 }
 
 

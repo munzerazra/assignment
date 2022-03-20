@@ -24,4 +24,22 @@ public class Constants {
         CoreError(String s) {
         }
     }
+
+    /**
+     * All Status messages here
+     */
+
+    public enum Status implements StatusCode {
+        ACTIVE(1), INACTIVE(0);
+        private final int code;
+
+        Status(int code) {
+            this.code = code;
+        }
+
+        @Override
+        public int getCode() {
+            return this.code;
+        }
+    }
 }
